@@ -20,7 +20,7 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
 
 
 
-// You can use the .authenticate() function like this to test the connection.
+// You can use the .authenticate() function to test the connection.
 sequelize
   .authenticate()
   .then(() => {
@@ -35,26 +35,38 @@ sequelize
 
 // A Model represents a table in the database.
 // Models are defined with sequelize.define('name', {attributes}, {options}).
+
+// By default, Sequelize will add the attributes createdAt and updatedAt to your model so you will be able to know when the database entry went into the db and when it was updated last.
+
+
+const Pet = sequelize.define('pet', {
+  name: Sequelize.STRING,
+  owner: Sequelize.STRING,
+})
+
 const User = sequelize.define('user', {
   firstName: Sequelize.STRING,
   lastName: Sequelize.STRING,
   likes: Sequelize.TEXT,
-  birthdate: Sequelize.DATE
+  birthdate: Sequelize.DATE,
+  flag: { type: Sequelize.BOOLEAN, allowNull: false, defaultValue: true },
+  //Flag Options: Will automatically set the flag to true if not set. setting allowNull to false will add NOT NULL to the column, and an error will be thrown from the DB when the query is executed if the column is null. 
 });
-  
 
 
+// Pet.belongsTo(User);
+// User.hasMany(Pet);
 
 // // Sync this Model to the DB (Create the table). force: true will drop the table if it already exists
 User.sync({force: true}).then(() => {
-  // User Table is now created!
   return User.bulkCreate([{
     firstName: 'Fred',
     lastName: 'Flintstone',
     birthdate: '1/1/1960'
   },{
     firstName: 'Wilma',
-    lastName: 'Flintstone'
+    lastName: 'Flintstone',
+    flag: false
   },{
     firstName: 'Pebbles',
     lastName: 'Flintstone'
@@ -69,6 +81,20 @@ User.sync({force: true}).then(() => {
     lastName: 'Rubble'
   }]);
 });
+
+Pet.sync({force: true}).then(() => {
+  return Pet.bulkCreate([{
+    name: 'Dino',
+    owner: 1,
+  },{
+    name: 'Bird',
+    owner: 3,
+  },{
+    name: 'Hoppy',
+    owner: 3
+  }]);
+});
+
 
 
 
@@ -112,6 +138,8 @@ app.delete('/api/users/:id', (req, res) => {
 
 
 
+
+
 // Replacements in a query can be done in two different ways, either using named parameters (starting with :), or unnamed, represented by a ?. Replacements are passed in the options object.
 app.get('/api/user/:id', (req, res) => {
 
@@ -122,6 +150,26 @@ app.get('/api/user/:id', (req, res) => {
   // sequelize.query('SELECT * FROM Users WHERE id = :id ',
   //   { replacements: { id: req.params.id }, type: sequelize.QueryTypes.SELECT }
   // ).then(user => res.send(user));
+})
+
+
+
+
+// Skips 3 instances and returns the 2 after that
+app.get('/api/offsetLimitUsers', (req, res) => {
+  User.findAll({ offset: 3, limit: 2 }).then(users => res.send(users));
+})
+
+
+
+
+app.get('/api/pets', (req, res) => {
+  User.findAll({
+    include: [{
+        model: Pet,
+        where: { owner: Sequelize.col('user.id') }
+    }]
+  }).then(pets => res.send(pets));
 })
 
 
