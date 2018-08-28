@@ -38,12 +38,6 @@ sequelize
 
 // By default, Sequelize will add the attributes createdAt and updatedAt to your model so you will be able to know when the database entry went into the db and when it was updated last.
 
-
-const Pet = sequelize.define('pet', {
-  name: Sequelize.STRING,
-  owner: Sequelize.STRING,
-})
-
 const User = sequelize.define('user', {
   firstName: Sequelize.STRING,
   lastName: Sequelize.STRING,
@@ -54,10 +48,7 @@ const User = sequelize.define('user', {
 });
 
 
-// Pet.belongsTo(User);
-// User.hasMany(Pet);
-
-// // Sync this Model to the DB (Create the table). force: true will drop the table if it already exists
+// Sync this Model to the DB (Create the table). force: true will drop the table if it already exists
 User.sync({force: true}).then(() => {
   return User.bulkCreate([{
     firstName: 'Fred',
@@ -82,19 +73,6 @@ User.sync({force: true}).then(() => {
   }]);
 });
 
-Pet.sync({force: true}).then(() => {
-  return Pet.bulkCreate([{
-    name: 'Dino',
-    owner: 1,
-  },{
-    name: 'Bird',
-    owner: 3,
-  },{
-    name: 'Hoppy',
-    owner: 3
-  }]);
-});
-
 
 
 
@@ -115,12 +93,12 @@ app.post('/api/users', (req, res) => {
 
 
 
-app.put('/api/users/:name', (req, res) => {
+app.put('/api/users/:id', (req, res) => {
   User.update({
     lastName: req.body.newLastName,
   }, {
     where: {
-      firstName: req.params.id
+      id: req.params.id
     }
   }).then(NumberOfUpdatedUsers => res.send(NumberOfUpdatedUsers));
 });
@@ -133,22 +111,22 @@ app.delete('/api/users/:id', (req, res) => {
     where: {
       id: req.params.id
     }
-  })
+  }).then(() => res.sendStatus(200));
 });
 
 
 
-
+// Use sequelize.query for raw queries.
 
 // Replacements in a query can be done in two different ways, either using named parameters (starting with :), or unnamed, represented by a ?. Replacements are passed in the options object.
 app.get('/api/user/:id', (req, res) => {
-
-  sequelize.query('SELECT * FROM Users WHERE id = ?',
-    { replacements: [req.params.id], type: sequelize.QueryTypes.SELECT }
+  
+  sequelize.query('SELECT * FROM Users WHERE id = :id ',
+    { replacements: { id: req.params.id }, type: sequelize.QueryTypes.SELECT }
   ).then(user => res.send(user));
-
-  // sequelize.query('SELECT * FROM Users WHERE id = :id ',
-  //   { replacements: { id: req.params.id }, type: sequelize.QueryTypes.SELECT }
+  
+  // sequelize.query('SELECT * FROM Users WHERE id = ?',
+  //   { replacements: [req.params.id], type: sequelize.QueryTypes.SELECT }
   // ).then(user => res.send(user));
 })
 
@@ -161,16 +139,6 @@ app.get('/api/offsetLimitUsers', (req, res) => {
 })
 
 
-
-
-app.get('/api/pets', (req, res) => {
-  User.findAll({
-    include: [{
-        model: Pet,
-        where: { owner: Sequelize.col('user.id') }
-    }]
-  }).then(pets => res.send(pets));
-})
 
 
 
